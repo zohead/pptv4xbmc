@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<addon id="plugin.video.pptv"
+    name="PPTV视频"
+    version="1.0"
+    provider-name="Uranus Zhou">
+    <extension
+        point="xbmc.python.pluginsource"
+        library="default.py">
+        <provides>video</provides>
+    </extension>
+    <extension point="xbmc.addon.metadata">
+        <summary lang="en">PPTV video plugin</summary>
+        <summary lang="zh">PPTV视频插件</summary>
+        <description lang="en">Watch online videos in www.pptv.com . Your XBMC system need m3u and m3u8 support for playing live stream and iPad stream</description>
+        <description lang="zh">观看 www.pptv.com 上的精彩在线直播和点播视频。 直播及iPad超清视频需XBMC系统可正常播放m3u m3u8类型网络媒体</description>
+        <platform>all</platform>
+    </extension>
+</addon>
+

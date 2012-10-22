@@ -1,0 +1,10 @@
+﻿########################################################################
+# # PPTV视频 for XBMC by Uranus Zhou, 2012
+########################################################################
+# Version 1.0 2012-10-23 (Uranus Zhou)
+# - Initial cross-platform release (include live stream support)
+# - Support differnt video qualities : normal/hd/full hd/blue-ray/iPad
+# - Set default video quality to : hd, you can change this in settings
+# - Support iPad live stream (m3u8) and non-live stream (m3u)
+# - Your XBMC system need m3u and m3u8 support for iPad streams
+########################################################################
