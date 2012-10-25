@@ -291,18 +291,27 @@ def GetPPTVVideoList(url, only_filter = False):
 		} )
 
 	# get live videos
-	videos = parseDOM(unicode(data, 'utf-8', 'ignore'), 'td', attrs = { 'class' : 'living' })
-	stations = parseDOM(unicode(data, 'utf-8', 'ignore'), 'em', attrs = { 'class' : 'station' })
-	for video, station in zip(videos, stations):
-		links = parseDOM(video, 'a', ret = 'href')
-		names = parseDOM(video, 'a', ret = 'title')
-		video_list.append( { 
-			'link' : CheckValidList(links).encode('utf-8'), 
-			'name' : station.encode('utf-8'), 
-			'image' : '', 
-			'isdir' : -1, 
-			'spc' : '(' + CheckValidList(names).encode('utf-8') + ')' 
-		} )
+	tmp = CheckValidList(parseDOM(unicode(data, 'utf-8', 'ignore'), 'table', attrs = { 'class' : 'tvnet_table' }))
+	if len(tmp) > 0:
+		videos = parseDOM(tmp, 'tr')
+		for video in videos:
+			station = CheckValidList(parseDOM(video, 'em', attrs = { 'class' : 'station' })).encode('utf-8')
+			image = CheckValidList(parseDOM(video, 'img', ret = 'src')).encode('utf-8')
+			tmp = CheckValidList(parseDOM(video, 'td', attrs = { 'class' : 'living' }))
+			if len(tmp) > 0:
+				link = CheckValidList(parseDOM(tmp, 'a', ret = 'href')).encode('utf-8')
+				spc = CheckValidList(parseDOM(tmp, 'a', ret = 'title')).encode('utf-8')
+			else:
+				link = CheckValidList(parseDOM(video, 'a', ret = 'href')).encode('utf-8')
+				spc = ''
+			if len(station) > 0 and len(link) > 0:
+				video_list.append( { 
+					'link' : link, 
+					'name' : station, 
+					'image' : image, 
+					'isdir' : 0, 
+					'spc' : '' if len(spc) <= 0 else '(' + spc + ')'
+				} )
 
 	# get sports live videos
 	videos = parseDOM(unicode(data, 'utf-8', 'ignore'), 'tr', attrs = { 'class' : 'living' })
@@ -432,6 +441,7 @@ def GetPPTVVideoURL(url, quality):
 	if not re.match('^http://v\.pptv\.com/.*$', url):
 		xbmcgui.Dialog().ok(__addonname__, PPTV_MSG_INVALID_URL)
 		return []
+
 	data = GetHttpData(url)
 	# try to directly get iPad live video URL
 	ipadurl = CheckValidList(re.compile(',\s*["\']ipadurl["\']\s*:\s*["\']([^"\']*)["\']').findall(data))
@@ -453,7 +463,7 @@ def GetPPTVVideoURL(url, quality):
 	else:
 		return GetPPTVVideoURL_Flash(url, quality)
 
-def GetPPTVSearchList(url):
+def GetPPTVSearchList(url, matchnameonly = None):
 	data = GetHttpData(url)
 	videos = parseDOM(unicode(data, 'utf-8', 'ignore'), 'li', attrs = { 'class' : 'movie_item ' })
 	# append the last video
@@ -475,6 +485,11 @@ def GetPPTVSearchList(url):
 		if len(tmp) <= 0:
 			continue
 		links = parseDOM(tmp[0], 'a', ret = 'href')
+
+		# whether need to only match specified video name
+		if matchnameonly and CheckValidList(names).encode('utf-8') == matchnameonly:
+			return CheckValidList(links).encode('utf-8')
+
 		# check whether has child
 		child = parseDOM(video, 'div', attrs = { 'class' : 'movie_child_tab' }, ret = 'class')
 		tmp = parseDOM(video, 'div', attrs = { 'class' : 'show_list_box' }, ret = 'class')
@@ -490,6 +505,9 @@ def GetPPTVSearchList(url):
 			'isdir' : len(child) if len(child) > 0 else -1, 
 			'spc' : ' '.join(spcs) 
 		} )
+	# find nothing for specified video name
+	if matchnameonly:
+		return ''
 	return (None, video_list, None)
 
 ##### PPTV functions end #####
@@ -588,8 +606,16 @@ def listVideo(name, url, list_ret):
 	xbmcplugin.endOfDirectory(int(sys.argv[1]))
 
 def playVideo(name, url, thumb):
-	quality = int(__addon__.getSetting('movie_quality'))
-	ppurls = GetPPTVVideoURL(url, quality)
+	ppurls = []
+
+	# if live page without video link, try to get video link from search result
+	if re.match('^http://live\.pptv\.com/list/tv_program/.*$', url):
+		url = GetPPTVSearchList(PPTV_SEARCH_URL + urllib.quote_plus(name), name)
+
+	if len(url) > 0:
+		quality = int(__addon__.getSetting('movie_quality'))
+		ppurls = GetPPTVVideoURL(url, quality)
+
 	if len(ppurls) > 0:
 		playlist = xbmc.PlayList(1)
 		playlist.clear()
