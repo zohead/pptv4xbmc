@@ -1,6 +1,12 @@
 ﻿########################################################################
 # # PPTV视频 for XBMC by Uranus Zhou, 2012
 ########################################################################
+# Version 1.1 2012-10-25 (Uranus Zhou)
+# - Support searching PPTV videos using XBMC Chinese Keyboard
+# - If searched video is not provided by PPTV, give user a tip message
+# - Give user a tip message if try to play PPTV VIP video
+# - Fix can't load some TV series video list bug
+
 # Version 1.0 2012-10-23 (Uranus Zhou)
 # - Initial cross-platform release (include live stream support)
 # - Support differnt video qualities : normal/hd/full hd/blue-ray/iPad

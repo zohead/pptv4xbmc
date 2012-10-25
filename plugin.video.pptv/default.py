@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import xbmc, xbmcgui, xbmcplugin, xbmcaddon, urllib2, urllib, re, gzip, json
+import ChineseKeyboard
 
 # Plugin constants
 __addonname__ = "PPTV视频"
@@ -14,6 +15,7 @@ PPTV_API_IPAD_JS = 'http://api.v.pptv.com/api/ipad/play.js'
 PPTV_WEBPLAY_XML = 'http://web-play.pptv.com/'
 PPTV_API_EPISODE_JS = 'http://api2.v.pptv.com/api/page/episodes.js'
 FLVCD_PARSER_PHP = 'http://www.flvcd.com/parse.php'
+PPTV_SEARCH_URL = 'http://search.pptv.com/s_video/q_'
 
 PPTV_CURRENT = '当前'
 PPTV_SORT = '排序：'
@@ -26,6 +28,11 @@ PPTV_LAST_PAGE = '最后一页'
 PPTV_PREV_PAGE = '上一页'
 PPTV_NEXT_PAGE = '下一页'
 PPTV_MSG_GET_URL_FAILED = '无法获取视频地址!'
+PPTV_MSG_INVALID_URL = '无效的视频地址, 可能不是PPTV视频!'
+PPTV_MSG_NO_VIP = '暂时无法观看PPTV VIP视频!'
+PPTV_SEARCH = '按此进行搜索...'
+PPTV_SEARCH_DESC = '请输入搜索内容'
+PPTV_SEARCH_RES = '搜索结果'
 
 # PPTV video qualities
 PPTV_VIDEO_NORMAL = 0
@@ -279,6 +286,7 @@ def GetPPTVVideoList(url, only_filter = False):
 			'link' : CheckValidList(links).encode('utf-8'), 
 			'name' : CheckValidList(names).encode('utf-8'), 
 			'image' : CheckValidList(images).encode('utf-8'), 
+			'isdir' : -1, 
 			'spc' : ' '.join(spcs) 
 		} )
 
@@ -292,6 +300,7 @@ def GetPPTVVideoList(url, only_filter = False):
 			'link' : CheckValidList(links).encode('utf-8'), 
 			'name' : station.encode('utf-8'), 
 			'image' : '', 
+			'isdir' : -1, 
 			'spc' : '(' + CheckValidList(names).encode('utf-8') + ')' 
 		} )
 
@@ -305,6 +314,7 @@ def GetPPTVVideoList(url, only_filter = False):
 				'link' : links[0].encode('utf-8'), 
 				'name' : CheckValidList(names).encode('utf-8'), 
 				'image' : '', 
+				'isdir' : -1, 
 				'spc' : '' 
 			} )
 
@@ -330,12 +340,22 @@ def GetPPTVVideoList(url, only_filter = False):
 
 	return (filter_list, video_list, pages_attr)
 
-def GetPPTVEpisodesList(url):
+def GetPPTVEpisodesList(name, url, thumb):
+	# check whether is VIP video
+	if re.match('^http://viptv\.pptv\.com/.*$', url):
+		xbmcgui.Dialog().ok(__addonname__, PPTV_MSG_NO_VIP)
+		return (None, [], None)
+
 	data = GetHttpData(url)
 	# get channel ID
-	cid = CheckValidList(re.compile(',\s*["\']channel_id["\']\s*:\s*(\d+)\s*,').findall(data))
+	cid = CheckValidList(re.compile('var webcfg\s*=.*,\s*["\']channel_id["\']\s*:\s*(\d+)\s*,').findall(data))
 	if len(cid) <= 0:
-		return []
+		cid = CheckValidList(re.compile('var webcfg\s*=.*\s*["\']id["\']\s*:\s*(\d+)\s*,').findall(data))
+		if len(cid) <= 0:
+			# no channel ID, maybe only contain one video link
+			links = parseDOM(unicode(data, 'utf-8', 'ignore'), 'a', attrs = { 'id' : 'btn_movieplay' }, ret = 'href')
+			return (None, [ { 'link' : i.encode('utf-8'), 'name' : name, 'image' : thumb, 'isdir' : 0, 'spc' : '' } for i in links], None)
+
 	# get page count
 	page_count = 1
 	page = CheckValidList(parseDOM(unicode(data, 'utf-8', 'ignore'), 'div', attrs = { 'class' : 'pages cf' }))
@@ -362,6 +382,7 @@ def GetPPTVEpisodesList(url):
 						'link' : CheckValidList(links).encode('utf-8'), 
 						'name' : CheckValidList(names).encode('utf-8'), 
 						'image' : CheckValidList(images).encode('utf-8'), 
+						'isdir' : -1, 
 						'spc' : '' 
 					} )
 			except:
@@ -407,6 +428,10 @@ def GetPPTVVideoURL_Flash(url, quality):
 	return url_list
 
 def GetPPTVVideoURL(url, quality):
+	# check whether is PPTV video
+	if not re.match('^http://v\.pptv\.com/.*$', url):
+		xbmcgui.Dialog().ok(__addonname__, PPTV_MSG_INVALID_URL)
+		return []
 	data = GetHttpData(url)
 	# try to directly get iPad live video URL
 	ipadurl = CheckValidList(re.compile(',\s*["\']ipadurl["\']\s*:\s*["\']([^"\']*)["\']').findall(data))
@@ -428,6 +453,45 @@ def GetPPTVVideoURL(url, quality):
 	else:
 		return GetPPTVVideoURL_Flash(url, quality)
 
+def GetPPTVSearchList(url):
+	data = GetHttpData(url)
+	videos = parseDOM(unicode(data, 'utf-8', 'ignore'), 'li', attrs = { 'class' : 'movie_item ' })
+	# append the last video
+	tmp = parseDOM(unicode(data, 'utf-8', 'ignore'), 'li', attrs = { 'class' : 'movie_item last' })
+	if len(tmp) > 0:
+		videos.append(tmp)
+	video_list = []
+	for video in videos:
+		thumb = parseDOM(video, 'div', attrs = { 'class' : 'movie_thumb' })
+		if len(thumb) <= 0:
+			continue
+		names = parseDOM(thumb[0], 'a', ret = 'title')
+		images = parseDOM(thumb[0], 'img', ret = 'src')
+		spcs = []
+		spans = parseDOM(thumb[0], 'span')
+		tinfos = parseDOM(thumb[0], 'div', attrs = { 'class' : 'movie_thumb_info' })
+		# get video link
+		tmp = parseDOM(video, 'div', attrs = { 'class' : 'movie_title' })
+		if len(tmp) <= 0:
+			continue
+		links = parseDOM(tmp[0], 'a', ret = 'href')
+		# check whether has child
+		child = parseDOM(video, 'div', attrs = { 'class' : 'movie_child_tab' }, ret = 'class')
+		tmp = parseDOM(video, 'div', attrs = { 'class' : 'show_list_box' }, ret = 'class')
+		child.extend(tmp)
+		# get video quality
+		spcs.extend(['[' + i.encode('utf-8') + ']' for i in spans])
+		# get video updates
+		spcs.extend(['(' + re.sub('<\?.*$', '', i.encode('utf-8').strip()) + ')' for i in tinfos])
+		video_list.append( { 
+			'link' : CheckValidList(links).encode('utf-8'), 
+			'name' : CheckValidList(names).encode('utf-8'), 
+			'image' : CheckValidList(images).encode('utf-8'), 
+			'isdir' : len(child) if len(child) > 0 else -1, 
+			'spc' : ' '.join(spcs) 
+		} )
+	return (None, video_list, None)
+
 ##### PPTV functions end #####
 
 def get_params():
@@ -447,20 +511,28 @@ def get_params():
 				param[splitparams[0]] = splitparams[1]
 	return param
 
+def showSearchEntry(total_items):
+	# show search entry
+	u = sys.argv[0] + '?mode=search'
+	liz = xbmcgui.ListItem('[COLOR FF00FFFF]<' + PPTV_SEARCH + '>[/COLOR]')
+	xbmcplugin.addDirectoryItem(int(sys.argv[1]), u, liz, False, total_items)
+
 def listRoot():
 	roots = GetPPTVCatalogs()
 	if not roots:
 		return
+	total_items = len(roots) + 1
+	showSearchEntry(total_items)
 	for i in roots:
 		u = sys.argv[0] + '?url=' + urllib.quote_plus(i['link']) + '&mode=videolist&name=' + urllib.quote_plus(i['name'])
 		liz = xbmcgui.ListItem(i['name'])
-		xbmcplugin.addDirectoryItem(int(sys.argv[1]), u, liz, True, len(roots))
+		xbmcplugin.addDirectoryItem(int(sys.argv[1]), u, liz, True, total_items)
 	xbmcplugin.endOfDirectory(int(sys.argv[1]))
 
 def listVideo(name, url, list_ret):
 	filter_list, video_list, pages_attr = list_ret
 	u = ''
-	total_items = len(video_list) + 1
+	total_items = len(video_list) + 2
 
 	# show name and page index
 	title = '[COLOR FFFF0000]' + PPTV_CURRENT + ':[/COLOR] ' + name + ' (' + PPTV_TTH
@@ -480,7 +552,7 @@ def listVideo(name, url, list_ret):
 		title += '1/1'
 	title += PPTV_PAGE + ')'
 
-	# show filter conditions
+	# show filter conditions if needed
 	if filter_list and len(filter_list) > 0:
 		tmp = [ '[COLOR FF00FF00]' + i['label'] + '[/COLOR]' + i['selected_name'] for i in filter_list ]
 		title += ' [' + '/'.join(tmp) + '] (' + PPTV_SELECT + ')'
@@ -489,18 +561,18 @@ def listVideo(name, url, list_ret):
 	liz = xbmcgui.ListItem(title)
 	xbmcplugin.addDirectoryItem(int(sys.argv[1]), u, liz, True, total_items)
 
+	showSearchEntry(total_items)
+
 	# show video list
 	for i in video_list:
 		title = i['name']
 		if len(i['spc']) > 0:
 			title += ' ' + i['spc']
 		is_dir = False
-		# check whether is a episode target
-		if re.match('^http://v\.pptv\.com/show/.*$', i['link']):
-			u = sys.argv[0] + '?url=' + urllib.quote_plus(i['link']) + '&mode=playvideo&name=' + urllib.quote_plus(title) + '&thumb=' + urllib.quote_plus(i['image'])
-		else:
+		# check whether is an episode target
+		if (i['isdir'] > 0) or ((i['isdir'] < 0) and (not re.match('^http://v\.pptv\.com/show/.*$', i['link']))):
 			is_dir = True
-			u = sys.argv[0] + '?url=' + urllib.quote_plus(i['link']) + '&mode=episodelist&name=' + urllib.quote_plus(title)
+		u = sys.argv[0] + '?url=' + urllib.quote_plus(i['link']) + '&mode=' + ('episodelist' if is_dir else 'playvideo') + '&name=' + urllib.quote_plus(title) + '&thumb=' + urllib.quote_plus(i['image'])
 		liz = xbmcgui.ListItem(title, thumbnailImage = i['image'])
 		xbmcplugin.addDirectoryItem(int(sys.argv[1]), u, liz, is_dir, total_items)
 
@@ -547,11 +619,21 @@ def listFilter(name, url):
 			return
 		level += 1
 
+def searchPPTV():
+	keyboard = ChineseKeyboard.Keyboard('', PPTV_SEARCH_DESC)
+	keyboard.doModal()
+	if (keyboard.isConfirmed()):
+		key = keyboard.getText()
+		if len(key) > 0:
+			u = sys.argv[0] + '?mode=searchlist&key=' + key
+			xbmc.executebuiltin('Container.Update(%s)' % u)
+
 params = get_params()
 mode = None
 name = None
 url = None
 thumb = None
+key = None
 
 try:
 	name = urllib.unquote_plus(params['name'])
@@ -569,14 +651,22 @@ try:
 	mode = params['mode']
 except:
 	pass
+try:
+	key = params['key']
+except:
+	pass
 
 if mode == None:
 	listRoot()
 elif mode == 'videolist':
 	listVideo(name, url, GetPPTVVideoList(url))
 elif mode == 'episodelist':
-	listVideo(name, url, GetPPTVEpisodesList(url))
+	listVideo(name, url, GetPPTVEpisodesList(name, url, thumb))
 elif mode == 'playvideo':
 	playVideo(name, url, thumb)
 elif mode == 'filterlist':
 	listFilter(name, url)
+elif mode == 'search':
+	searchPPTV()
+elif mode == 'searchlist':
+	listVideo(PPTV_SEARCH_RES + ' - ' + key, None, GetPPTVSearchList(PPTV_SEARCH_URL + urllib.quote_plus(key)))
