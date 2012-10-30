@@ -1,6 +1,10 @@
 ﻿########################################################################
 # # PPTV视频 for XBMC by Uranus Zhou, 2012
 ########################################################################
+# Version 1.1.3 2012-10-31 (Uranus Zhou)
+# - Update ternary expression for Python 2.x
+# - Use simplejson instead of json in Python 2.4/2.5 (like Xbox)
+
 # Version 1.1.2 2012-10-30 (Uranus Zhou)
 # - Replace ternary 'if else' with normal 'if else'
 # - Let this work in XBMC system with Python lower than 2.5 (like Xbox)

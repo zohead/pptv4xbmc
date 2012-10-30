@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
-import xbmc, xbmcgui, xbmcplugin, xbmcaddon, urllib2, urllib, re, gzip, json
+import xbmc, xbmcgui, xbmcplugin, xbmcaddon, urllib2, urllib, re, gzip
+try:
+	import json
+except:
+	import simplejson as json
 import ChineseKeyboard
 
 # Plugin constants
@@ -225,16 +229,10 @@ def GetPPTVCatalogs():
 	return None
 
 def CheckJSLink(link):
-	if link[:11] == 'javascript:':
-		return ''
-	else:
-		return link
+	return (link[:11] != 'javascript:' and link or '')
 
 def CheckValidList(val):
-	if len(val) <= 0:
-		return ''
-	else:
-		return val[0]
+	return (len(val) > 0 and val[0] or '')
 
 def GetPPTVVideoList(url, only_filter = False):
 	data = GetHttpData(url)
@@ -311,16 +309,12 @@ def GetPPTVVideoList(url, only_filter = False):
 				link = CheckValidList(parseDOM(video, 'a', ret = 'href')).encode('utf-8')
 				spc = ''
 			if len(station) > 0 and len(link) > 0:
-				if len(spc) <= 0:
-					tmp = ''
-				else:
-					tmp = '(' + spc + ')'
 				video_list.append( { 
 					'link' : link, 
 					'name' : station, 
 					'image' : image, 
 					'isdir' : 0, 
-					'spc' : tmp 
+					'spc' : (len(spc) > 0 and '(' + spc + ')' or '') 
 				} )
 
 	# get sports live videos
@@ -508,15 +502,11 @@ def GetPPTVSearchList(url, matchnameonly = None):
 		spcs.extend(['[' + i.encode('utf-8') + ']' for i in spans])
 		# get video updates
 		spcs.extend(['(' + re.sub('<\?.*$', '', i.encode('utf-8').strip()) + ')' for i in tinfos])
-		if len(child) > 0:
-			tmp = len(child)
-		else:
-			tmp = -1
 		video_list.append( { 
 			'link' : CheckValidList(links).encode('utf-8'), 
 			'name' : CheckValidList(names).encode('utf-8'), 
 			'image' : CheckValidList(images).encode('utf-8'), 
-			'isdir' : tmp, 
+			'isdir' : (len(child) > 0 and len(child) or -1), 
 			'spc' : ' '.join(spcs) 
 		} )
 	# find nothing for specified video name
@@ -601,12 +591,10 @@ def listVideo(name, url, list_ret):
 		if len(i['spc']) > 0:
 			title += ' ' + i['spc']
 		is_dir = False
-		tmp = 'playvideo'
 		# check whether is an episode target
 		if (i['isdir'] > 0) or ((i['isdir'] < 0) and (not re.match('^http://v\.pptv\.com/show/.*$', i['link']))):
 			is_dir = True
-			tmp = 'episodelist'
-		u = sys.argv[0] + '?url=' + urllib.quote_plus(i['link']) + '&mode=' + tmp + '&name=' + urllib.quote_plus(title) + '&thumb=' + urllib.quote_plus(i['image'])
+		u = sys.argv[0] + '?url=' + urllib.quote_plus(i['link']) + '&mode=' + (is_dir and 'episodelist' or 'playvideo') + '&name=' + urllib.quote_plus(title) + '&thumb=' + urllib.quote_plus(i['image'])
 		liz = xbmcgui.ListItem(title, thumbnailImage = i['image'])
 		xbmcplugin.addDirectoryItem(int(sys.argv[1]), u, liz, is_dir, total_items)
 
