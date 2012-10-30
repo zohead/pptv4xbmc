@@ -1,6 +1,10 @@
 ﻿########################################################################
 # # PPTV视频 for XBMC by Uranus Zhou, 2012
 ########################################################################
+# Version 1.1.2 2012-10-30 (Uranus Zhou)
+# - Replace ternary 'if else' with normal 'if else'
+# - Let this work in XBMC system with Python lower than 2.5 (like Xbox)
+
 # Version 1.1.1 2012-10-25 (Uranus Zhou)
 # - Fix incorrect live video list bug
 # - If a live video doesn't have direct video link, search to get link

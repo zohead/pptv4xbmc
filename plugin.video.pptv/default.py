@@ -225,10 +225,16 @@ def GetPPTVCatalogs():
 	return None
 
 def CheckJSLink(link):
-	return '' if link[:11] == "javascript:" else link
+	if link[:11] == 'javascript:':
+		return ''
+	else:
+		return link
 
 def CheckValidList(val):
-	return '' if len(val) <= 0 else val[0]
+	if len(val) <= 0:
+		return ''
+	else:
+		return val[0]
 
 def GetPPTVVideoList(url, only_filter = False):
 	data = GetHttpData(url)
@@ -305,12 +311,16 @@ def GetPPTVVideoList(url, only_filter = False):
 				link = CheckValidList(parseDOM(video, 'a', ret = 'href')).encode('utf-8')
 				spc = ''
 			if len(station) > 0 and len(link) > 0:
+				if len(spc) <= 0:
+					tmp = ''
+				else:
+					tmp = '(' + spc + ')'
 				video_list.append( { 
 					'link' : link, 
 					'name' : station, 
 					'image' : image, 
 					'isdir' : 0, 
-					'spc' : '' if len(spc) <= 0 else '(' + spc + ')'
+					'spc' : tmp 
 				} )
 
 	# get sports live videos
@@ -498,11 +508,15 @@ def GetPPTVSearchList(url, matchnameonly = None):
 		spcs.extend(['[' + i.encode('utf-8') + ']' for i in spans])
 		# get video updates
 		spcs.extend(['(' + re.sub('<\?.*$', '', i.encode('utf-8').strip()) + ')' for i in tinfos])
+		if len(child) > 0:
+			tmp = len(child)
+		else:
+			tmp = -1
 		video_list.append( { 
 			'link' : CheckValidList(links).encode('utf-8'), 
 			'name' : CheckValidList(names).encode('utf-8'), 
 			'image' : CheckValidList(images).encode('utf-8'), 
-			'isdir' : len(child) if len(child) > 0 else -1, 
+			'isdir' : tmp, 
 			'spc' : ' '.join(spcs) 
 		} )
 	# find nothing for specified video name
@@ -587,10 +601,12 @@ def listVideo(name, url, list_ret):
 		if len(i['spc']) > 0:
 			title += ' ' + i['spc']
 		is_dir = False
+		tmp = 'playvideo'
 		# check whether is an episode target
 		if (i['isdir'] > 0) or ((i['isdir'] < 0) and (not re.match('^http://v\.pptv\.com/show/.*$', i['link']))):
 			is_dir = True
-		u = sys.argv[0] + '?url=' + urllib.quote_plus(i['link']) + '&mode=' + ('episodelist' if is_dir else 'playvideo') + '&name=' + urllib.quote_plus(title) + '&thumb=' + urllib.quote_plus(i['image'])
+			tmp = 'episodelist'
+		u = sys.argv[0] + '?url=' + urllib.quote_plus(i['link']) + '&mode=' + tmp + '&name=' + urllib.quote_plus(title) + '&thumb=' + urllib.quote_plus(i['image'])
 		liz = xbmcgui.ListItem(title, thumbnailImage = i['image'])
 		xbmcplugin.addDirectoryItem(int(sys.argv[1]), u, liz, is_dir, total_items)
 
