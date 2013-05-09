@@ -15,10 +15,11 @@ UserAgent_IPAD = 'Mozilla/5.0 (iPad; U; CPU OS 4_2_1 like Mac OS X; ja-jp) Apple
 UserAgent_IE = 'Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Trident/5.0)'
 
 PPTV_LIST = 'http://list.pptv.com/'
-PPTV_API_IPAD_JS = 'http://api.v.pptv.com/api/ipad/play.js'
 PPTV_WEBPLAY_XML = 'http://web-play.pptv.com/'
 PPTV_API_EPISODE_JS = 'http://api2.v.pptv.com/api/page/episodes.js'
 FLVCD_PARSER_PHP = 'http://www.flvcd.com/parse.php'
+FLVCD_DOWN_PARSER_PHP = 'http://www.flvcd.com/downparse.php'
+FLVCD_DIY_URL = 'http://www.flvcd.com/diy/diy00'
 PPTV_SEARCH_URL = 'http://search.pptv.com/s_video/q_'
 
 PPTV_CURRENT = '当前'
@@ -43,7 +44,10 @@ PPTV_VIDEO_NORMAL = 0
 PPTV_VIDEO_HD = 1
 PPTV_VIDEO_FHD = 2
 PPTV_VIDEO_BLUER = 3
-PPTV_VIDEO_IPAD = 4
+
+# PPTV video quality values
+# Note: Blue ray video is currently only available to VIP users, so pity
+PPTV_VIDEO_QUALITY_VALS = ('normal', 'high', 'super', '')
 
 ##### Common functions #####
 
@@ -408,36 +412,60 @@ def GetPPTVVideoURL_Flash(url, quality):
 	vid = CheckValidList(re.compile(',\s*["\']vid["\']\s*:\s*(\d+)\s*,').findall(data))
 	if len(vid) <= 0:
 		return []
-	# get video server and file name
-	data = GetHttpData(PPTV_WEBPLAY_XML + 'webplay3-0-' + vid + '.xml&ft=0&version=2&type=web.fpp')
-	shes = parseDOM(unicode(data, 'utf-8', 'ignore'), 'sh')
-	tmp = CheckValidList(parseDOM(unicode(data, 'utf-8', 'ignore'), 'file'))
-	if len(tmp) <= 0:
+	
+	# get data
+	data = GetHttpData(PPTV_WEBPLAY_XML + 'webplay3-0-' + vid + '.xml&ft=' + str(quality) + '&version=4&type=web.fpp')
+
+	# get current file name and index
+	rid = CheckValidList(parseDOM(unicode(data, 'utf-8', 'ignore'), 'channel', ret = 'rid'))
+	cur = CheckValidList(parseDOM(unicode(data, 'utf-8', 'ignore'), 'file', ret = 'cur'))
+
+	if len(rid) <= 0 or len(cur) <= 0:
 		return []
-	files = parseDOM(tmp, 'item', ret = 'rid')
-	fts = parseDOM(tmp, 'item', ret = 'ft')
-	if min(len(shes), len(files), len(fts)) <= 0:
+
+	dt = CheckValidList(parseDOM(unicode(data, 'utf-8', 'ignore'), 'dt', attrs = { 'ft' : cur.encode('utf-8') }))
+	if len(dt) <= 0:
 		return []
-	# get quality index
-	try:
-		ind = fts.index(str(quality))
-	except:
-		# if specified quality is not in qualities list, use the last existing one
-		ind = -1
+
+	# get server and file key
+	sh = CheckValidList(parseDOM(dt, 'sh'))
+	f_key = CheckValidList(parseDOM(dt, 'key'))
+	if len(sh) <= 0:
+		return []
+
 	# get segment list
-	dragdata = CheckValidList(parseDOM(unicode(data, 'utf-8', 'ignore'), 'dragdata', attrs = { 'ft' : fts[ind].encode('utf-8') }))
+	dragdata = CheckValidList(parseDOM(unicode(data, 'utf-8', 'ignore'), 'dragdata', attrs = { 'ft' : cur.encode('utf-8') }))
 	if len(dragdata) <= 0:
 		return []
 	sgms = parseDOM(dragdata, 'sgm', ret = 'no')
 	if len(sgms) <= 0:
 		return []
-	url_list = []
+
 	# get key from flvcd.com, sorry we can't get it directly by now
-	data = GetHttpData(FLVCD_PARSER_PHP + '?kw=' + url)
+	data = GetHttpData(FLVCD_PARSER_PHP + '?format=' + PPTV_VIDEO_QUALITY_VALS[int(cur.encode('utf-8'))] + '&kw=' + url)
+	forms = CheckValidList(parseDOM(unicode(data, 'utf-8', 'ignore'), 'form', attrs = { 'action' : 'downparse.php' }))
+	if len(forms) <= 0:
+		return []
+	# get hidden values in form
+	input_names = parseDOM(forms.encode('utf-8'), 'input', attrs = { 'type' : 'hidden' }, ret = 'name')
+	input_values = parseDOM(forms.encode('utf-8'), 'input', attrs = { 'type' : 'hidden' }, ret = 'value')
+	if min(len(input_names), len(input_names)) <= 0:
+		return []
+
+	data = GetHttpData(FLVCD_DOWN_PARSER_PHP + '?' + urllib.urlencode(zip(input_names, input_values)))
+	flvcd_id = CheckValidList(re.compile('xdown\.php\?id=(\d+)').findall(data))
+	if len(flvcd_id) <= 0:
+		return []
+
+	data = GetHttpData(FLVCD_DIY_URL + flvcd_id + '.htm')
 	key = CheckValidList(re.compile('<U>http://v\.pptv\.com[^/]*/[^\?]*\?(key=[^&\n]*)').findall(data))
+	if len(key) <= 0:
+		return []
+
+	url_list = []
 	# add segments of video
 	for sgm in sgms:
-		url_list.append('http://' + shes[ind].encode('utf-8') + '/' + sgm.encode('utf-8') + '/' + files[ind].encode('utf-8') + '?type=fpp&' + key)
+		url_list.append('http://' + sh.encode('utf-8') + '/' + sgm.encode('utf-8') + '/' + rid.encode('utf-8') + '?type=fpp&' + key + '&k=' + f_key.encode('utf-8'))
 	return url_list
 
 def GetPPTVVideoURL(url, quality):
@@ -447,33 +475,66 @@ def GetPPTVVideoURL(url, quality):
 		return []
 
 	data = GetHttpData(url)
+
 	# try to directly get iPad live video URL
 	ipadurl = CheckValidList(re.compile(',\s*["\']ipadurl["\']\s*:\s*["\']([^"\']*)["\']').findall(data))
 	if len(ipadurl) > 0:
 		return [re.sub('\\\/', '/', ipadurl)]
-	if quality == PPTV_VIDEO_IPAD:
-		# try to get iPad non-live URL from PPTV API
-		rid = CheckValidList(re.compile(',\s*["\']rid["\']\s*:\s*["\']([^"\']*)["\']').findall(data))
-		if len(rid):
-			data = GetHttpData(PPTV_API_IPAD_JS + '?rid=' + rid)
-			jstr = CheckValidList(re.compile('.*\((.*)\).*').findall(data))
-			if len(jstr) > 0:
-				try:
-					ppdata = json.loads(jstr)
-					return [ppdata['data']]
-				except:
-					pass
-		return []
+
+	# try to get iPad non-live video URL
+	if 'true' == __addon__.getSetting('ipad_video'):
+		vid = CheckValidList(re.compile(',\s*["\']vid["\']\s*:\s*(\d+)\s*,').findall(data))
+		if len(vid) <= 0:
+			return []
+
+		# get data
+		data = GetHttpData(PPTV_WEBPLAY_XML + 'webplay3-0-' + vid + '.xml&version=4&type=m3u8.web.pad')
+
+		# get quality
+		tmp = CheckValidList(parseDOM(unicode(data, 'utf-8', 'ignore'), 'file'))
+		if len(tmp) <= 0:
+			return []
+		items = parseDOM(tmp, 'item', ret = 'rid')
+		if len(items) <= 0:
+			return []
+
+		if quality >= len(items):
+			# if specified quality is not in qualities list, use the last existing one
+			quality = len(items) - 1
+
+		rid = items[quality]
+		cur = str(quality)
+
+		if len(rid) <= 0 or len(cur) <= 0:
+			return []
+
+		dt = CheckValidList(parseDOM(unicode(data, 'utf-8', 'ignore'), 'dt', attrs = { 'ft' : cur.encode('utf-8') }))
+		if len(dt) <= 0:
+			return []
+
+		# get server and file key
+		sh = CheckValidList(parseDOM(dt, 'sh'))
+		f_key = CheckValidList(parseDOM(dt, 'key'))
+		if len(sh) <= 0:
+			return []
+		
+		rid = CheckValidList(re.compile('([^\.]*)\.').findall(rid))
+
+		return ['http://' + sh.encode('utf-8') + '/' + rid.encode('utf-8') + '.m3u8?type=m3u8.web.pad&k=' + f_key.encode('utf-8')]
 	else:
 		return GetPPTVVideoURL_Flash(url, quality)
 
 def GetPPTVSearchList(url, matchnameonly = None):
 	data = GetHttpData(url)
-	videos = parseDOM(unicode(data, 'utf-8', 'ignore'), 'li', attrs = { 'class' : 'movie_item ' })
-	# append the last video
-	tmp = parseDOM(unicode(data, 'utf-8', 'ignore'), 'li', attrs = { 'class' : 'movie_item last' })
-	if len(tmp) > 0:
-		videos.append(tmp)
+	videos = []
+	mitems = ('movie_item  filmitem ', 'movie_item  filmitem last', 'movie_item   ', 'movie_item zyitem  ', 'movie_item zyitem  last')
+
+	for i in mitems:
+		# append video list
+		tmp = parseDOM(unicode(data, 'utf-8', 'ignore'), 'li', attrs = { 'class' : i })
+		if len(tmp) > 0:
+			videos.extend(tmp)
+
 	video_list = []
 	for video in videos:
 		thumb = parseDOM(video, 'div', attrs = { 'class' : 'movie_thumb' })
@@ -509,6 +570,7 @@ def GetPPTVSearchList(url, matchnameonly = None):
 			'isdir' : (len(child) > 0 and len(child) or -1), 
 			'spc' : ' '.join(spcs) 
 		} )
+
 	# find nothing for specified video name
 	if matchnameonly:
 		return ''

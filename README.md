@@ -12,9 +12,11 @@ This is a cross-platform plugin, now support different video qualities:
 * high definition
 * full high definition
 * blue-ray
-* iPad full high definition (m3u and m3u8)
 
-Live video only support iPad full high definition m3u8 format
+iPad definition m3u8 format is enabled by default, if can't play, 
+you can turn it off in settings interface
+
+Live video only support iPad definition m3u8 format
 
 You can change default video quality in PPTV video plugin's settings interface
 
@@ -32,9 +34,11 @@ PPTV ÊÓÆµ XBMC ²å¼şÖ§³Ö¹Û¿´ <http://www.pptv.com/> ¸÷ÖÖÊÓÆµ£¨°üÀ¨Ö±²¥Á÷Ã½ÌåÊÓÆµ£
 * ¸ßÇå
 * ³¬Çå
 * À¶¹â
-* iPad ³¬ÇåÊÓÆµ (m3u ¼° m3u8 ¸ñÊ½)
 
-Ö±²¥ÊÓÆµÄ¿Ç°Ö»Ö§³Ö iPad ³¬ÇåÊÓÆµ µÄ m3u8 ¸ñÊ½
+iPad ÊÓÆµ (m3u ¼° m3u8 ¸ñÊ½) Ä¬ÈÏÎªÆôÓÃ£¬Èç¹ûÎŞ·¨Õı³£²¥·Å£¬
+Äú¿ÉÒÔÔÚÉèÖÃ½çÃæÖĞ¹Ø±Õ´ËÑ¡Ïî
+
+Ö±²¥ÊÓÆµÄ¿Ç°Ö»Ö§³Ö iPad µÄ m3u8 ¸ñÊ½
 
 Äú¿ÉÒÔÔÚ PPTV ÊÓÆµ XBMC ²å¼şµÄÉèÖÃ½çÃæÖĞĞŞ¸ÄÄ¬ÈÏµÄÊÓÆµÖÊÁ¿
 
