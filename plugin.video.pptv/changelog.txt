@@ -1,6 +1,9 @@
 ﻿########################################################################
 # # PPTV视频 for XBMC by Uranus Zhou, 2013
 ########################################################################
+# Version 1.1.9 2013-06-13 (Uranus Zhou - nocwat at gmail dot com)
+# - Fix incorrect m3u8 live video URL bug
+
 # Version 1.1.8 2013-05-09 (Uranus Zhou - nocwat at gmail dot com)
 # - Skip version 1.1.4 ~ 1.1.7 version, cmeng update these versions
 # - Remove PPSAP option in 1.1.4 ~ 1.1.7 cmeng for platform independent

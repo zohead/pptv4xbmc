@@ -479,7 +479,10 @@ def GetPPTVVideoURL(url, quality):
 	# try to directly get iPad live video URL
 	ipadurl = CheckValidList(re.compile(',\s*["\']ipadurl["\']\s*:\s*["\']([^"\']*)["\']').findall(data))
 	if len(ipadurl) > 0:
-		return [re.sub('\\\/', '/', ipadurl)]
+		ipadurl = re.sub('\\\/', '/', ipadurl)
+		if ipadurl.find('?type=') < 0:
+			ipadurl += '?type=m3u8.web.pad'
+		return [ipadurl]
 
 	# try to get iPad non-live video URL
 	if 'true' == __addon__.getSetting('ipad_video'):
