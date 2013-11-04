@@ -1,6 +1,15 @@
 ﻿########################################################################
 # # PPTV视频 for XBMC by Uranus Zhou, 2013
 ########################################################################
+# Version 1.2.0 2013-11-03 (Uranus Zhou - nocwat at gmail dot com)
+# - Big update for PPTV website changes
+# - Fix can't get PPTV video category list bug
+# - Fix can't get PPTV video list bug
+# - Fix can't get PPTV episode list bug
+# - Fix can't get PPTV flash video url bug
+# - Enum areas for TV list
+# - Use new PPTV API to get sports/games/finance live video list
+
 # Version 1.1.9 2013-06-13 (Uranus Zhou - nocwat at gmail dot com)
 # - Fix incorrect m3u8 live video URL bug
 
