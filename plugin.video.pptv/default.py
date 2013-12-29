@@ -70,7 +70,11 @@ def GetHttpData(url, agent = UserAgent_IPAD):
 		response = urllib2.urlopen(req)
 		httpdata = response.read()
 		if response.headers.get('content-encoding', None) == 'gzip':
-			httpdata = gzip.GzipFile(fileobj=StringIO.StringIO(httpdata)).read()
+			try:
+				tmpdata = gzip.GzipFile(fileobj=StringIO.StringIO(httpdata)).read()
+				httpdata = tmpdata
+			except:
+				print "Invalid gzip content on: " + url
 		charset = response.headers.getparam('charset')
 		response.close()
 	except:

@@ -1,6 +1,17 @@
 ﻿########################################################################
-# # PPTV视频 for XBMC by Uranus Zhou, 2013
+# # PPTV视频 for XBMC by Uranus Zhou, 2012 - 2014
 ########################################################################
+# Version 1.2.3 2013-12-29 (Uranus Zhou - nocwat at gmail dot com)
+# Fix can't get some video URL bug (incorrect gzip page encoding)
+# Some sports live videos like premier league should work
+
+# Version 1.2.2 2013-12-25 (cmeng)
+# Revert back to 1.2.0
+
+# Version 1.2.1 2013-12-25 (cmeng)
+# Temporary fix for listroot - link broken
+# Update filters extraction attribute 
+
 # Version 1.2.0 2013-11-03 (Uranus Zhou - nocwat at gmail dot com)
 # - Big update for PPTV website changes
 # - Fix can't get PPTV video category list bug
