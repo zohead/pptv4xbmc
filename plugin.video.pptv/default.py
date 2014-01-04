@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import xbmc, xbmcgui, xbmcplugin, xbmcaddon, urllib2, urllib, re, gzip, datetime
+import xbmc, xbmcgui, xbmcplugin, xbmcaddon, urllib2, urllib, re, gzip, datetime, StringIO
 try:
 	import json
 except:
@@ -65,13 +65,14 @@ dbglevel = 3
 def GetHttpData(url, agent = UserAgent_IPAD):
 	#print "getHttpData: " + url
 	req = urllib2.Request(url)
+	req.add_header('Accept-encoding', 'gzip')
 	req.add_header('User-Agent', agent)
 	try:
 		response = urllib2.urlopen(req)
 		httpdata = response.read()
 		if response.headers.get('content-encoding', None) == 'gzip':
 			try:
-				tmpdata = gzip.GzipFile(fileobj=StringIO.StringIO(httpdata)).read()
+				tmpdata = gzip.GzipFile(fileobj = StringIO.StringIO(httpdata)).read()
 				httpdata = tmpdata
 			except:
 				print "Invalid gzip content on: " + url
