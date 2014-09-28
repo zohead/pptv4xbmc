@@ -450,7 +450,7 @@ def GetPPTVVideoURL_Flash(url, quality):
 	vid = CheckValidList(re.compile(',\s*["\']vid["\']\s*:\s*(\d+)\s*,').findall(data))
 	if len(vid) <= 0:
 		return []
-	
+
 	# get data
 	data = GetHttpData(PPTV_WEBPLAY_XML + 'webplay3-0-' + vid + '.xml&ft=' + str(quality) + '&version=4&type=web.fpp')
 
@@ -509,11 +509,15 @@ def GetPPTVVideoURL_Flash(url, quality):
 
 def GetPPTVVideoURL(url, quality):
 	# check whether is PPTV video
-	if not re.match('^http://.*\.pptv\.com/.*$', url):
+	domain = CheckValidList(re.compile('^http://(.*\.pptv\.com)/.*$').findall(url))
+	if len(domain) <= 0:
 		xbmcgui.Dialog().ok(__addonname__, PPTV_MSG_INVALID_URL)
 		return []
 
 	data = GetHttpData(url)
+
+	# new key for query XML
+	kk = CheckValidList(re.compile('%26kk%3D([^"\']*)["\'],').findall(data))
 
 	# try to directly get iPad live video URL
 	ipadurl = CheckValidList(re.compile(',\s*["\']ipadurl["\']\s*:\s*["\']([^"\']*)["\']').findall(data))
@@ -521,12 +525,15 @@ def GetPPTVVideoURL(url, quality):
 		ipadurl = re.sub('\\\/', '/', ipadurl)
 		if ipadurl.find('?type=') < 0:
 			ipadurl += '?type=m3u8.web.pad'
+		if len(kk) > 0:
+			ipadurl += '&kk=' + kk
+		ipadurl += '&o=' + domain
 		return [ipadurl]
 
 	# get sports iPad live URL
 	ipadurl = CheckValidList(re.compile('["\']pbar_video_(\d+)["\']').findall(data))
 	if len(ipadurl) > 0:
-		return [ PPTV_WEBPLAY_XML + 'web-m3u8-' + ipadurl + '.m3u8?type=m3u8.web.pad' ]
+		return [ PPTV_WEBPLAY_XML + 'web-m3u8-' + ipadurl + '.m3u8?type=m3u8.web.pad&o=' + domain ]
 
 	# try to get iPad non-live video URL
 	if 'true' == __addon__.getSetting('ipad_video'):
@@ -534,8 +541,14 @@ def GetPPTVVideoURL(url, quality):
 		if len(vid) <= 0:
 			return []
 
+		if len(kk) <= 0:
+			return []
+
 		# get data
-		data = GetHttpData(PPTV_WEBPLAY_XML + 'webplay3-0-' + vid + '.xml&version=4&type=m3u8.web.pad')
+		ipadurl = PPTV_WEBPLAY_XML + 'webplay3-0-' + vid + '.xml&version=4&type=m3u8.web.pad'
+		if len(kk) > 0:
+			ipadurl += '&kk=' + kk
+		data = GetHttpData(ipadurl)
 
 		# get quality
 		tmp = CheckValidList(parseDOM(unicode(data, 'utf-8', 'ignore'), 'file'))
