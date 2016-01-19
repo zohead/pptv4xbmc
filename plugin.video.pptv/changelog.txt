@@ -1,6 +1,12 @@
 ﻿########################################################################
-# # PPTV视频 for XBMC by Uranus Zhou, 2012 - 2014
+# # PPTV视频 for XBMC by Uranus Zhou, 2012 - 2016
 ########################################################################
+# Version 1.2.9 2016-01-19 (Uranus Zhou - nocwat at gmail dot com)
+# Fix search doesn't work for PPTV new website
+# Fix get TV list from area list may fail cause XBMC script error bug
+# Fix can't get Flash video URL bug (add flvcd Caesar cipher support)
+# Change default video mode from m3u8 to Flash cause PPTV limit m3u8 to 10 minutes
+
 # Version 1.2.8 2014-12-13 (Uranus Zhou - nocwat at gmail dot com)
 # Fix can't get video catagory bug cause PPTV website update
 # Fix can't list video bug, fix video list page bug
